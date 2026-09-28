@@ -44,7 +44,26 @@ function makeGrid(width,height){
   while(remaining>4){const cut=2+Math.floor(Math.random()*2);pieces.push({...region,y,h:cut});y+=cut;remaining-=cut;}
   pieces.push({...region,y,h:remaining});return pieces;
  });
- return balanced.sort((a,b)=>a.y-b.y||a.x-b.x);
+ const shaped=balanced.flatMap(region=>{
+  if(region.w<5||region.h<=2)return [region];
+  const short=1+Math.floor(Math.random()*2);
+  return [{...region,h:short},{...region,y:region.y+short,h:region.h-short}];
+ });
+ function neighbors(a,b){
+  const overlapX=a.x<b.x+b.w&&b.x<a.x+a.w,overlapY=a.y<b.y+b.h&&b.y<a.y+a.h;
+  return (overlapX&&(a.y+a.h===b.y||b.y+b.h===a.y))||(overlapY&&(a.x+a.w===b.x||b.x+b.w===a.x));
+ }
+ // Interrupt adjacent wide rows with columns, rather than another broad stripe.
+ for(let i=0;i<shaped.length;i++){
+  const region=shaped[i];
+  if(region.w>=5&&(region.h>2||shaped.some((other,j)=>j!==i&&other.w>=5&&neighbors(region,other)))){
+   const widths=[];let remaining=region.w;
+   while(remaining>4){const part=2+Math.floor(Math.random()*2);widths.push(part);remaining-=part;}widths.push(remaining);
+   let x=region.x;const pieces=widths.map(w=>{const piece={...region,x,w};x+=w;return piece;});
+   shaped.splice(i,1,...pieces);i+=pieces.length-1;
+  }
+ }
+ return shaped.sort((a,b)=>a.y-b.y||a.x-b.x);
 }
 function fillBlock(poem,source,height){
  let draft='',previous='';
