@@ -4,8 +4,18 @@ const sources = [
  {title:'La seducción',author:'Sara Torres',kind:'BOOK · ESPAÑOL',url:'https://www.penguinlibros.com/es/novela-romantica/340377-libro-la-seduccion-9788419437808',theme:'the tenderness of waiting',starts:['Your typing dots make a tiny weather inside me.','I read your message slowly, as if slowness could bring you nearer.','Between your goodnight and my reply, a whole room opens.'],middles:['I want a closeness that leaves you room to move.','Desearte: to leave the door open without asking you to enter.','The distance is full of what we have not asked of each other.']},
  {title:'Skincare for Unruly Bodies',author:'Charlotte Rohde',kind:'ESSAY',url:'https://www.charlotterohde.de/',linkNote:'Author website; original essay PDF is unavailable',theme:'letters with a pulse',starts:['I give this sentence a softer body.','My letters lean toward you before I know what to say.','Imagine the curve of a letter as a place to rest.'],middles:['A word can blush without a face.','The screen holds a voice that will not stay inside its outline.','Even my punctuation wants to be held.']},
  {title:'Xenofeminism: A Politics for Alienation',author:'Laboria Cuboniks',kind:'MANIFESTO',url:'https://laboriacuboniks.net/manifesto/',theme:'a future we can change',starts:['We build a future with room for every version of us.','Your name is not a limit on what you can become.','Tonight we teach the network another way to care.'],middles:['No default setting gets to decide the shape of our lives.','We share the tools and leave the possibilities open.','A different world begins in what we make available to each other.']},
- {title:'Brandon',author:'Shu Lea Cheang',kind:'NET ART · ARCHIVE',url:'https://www.guggenheim.org/artwork/15337',theme:'a body across the network',starts:['I carry my chosen name from window to window.','Somewhere beyond the login, a body asks to be seen.','We leave a trace that an archive might hold gently.'],middles:['Being visible should not mean giving up the right to be safe.','The network remembers fragments; we remember a person.','I want a space where changing shape does not cost us tenderness.']}
+ {title:'Brandon',author:'Shu Lea Cheang',kind:'NET ART · ARCHIVE',url:'https://www.guggenheim.org/artwork/15337',theme:'a body across the network',starts:['I carry my chosen name from window to window.','Somewhere beyond the login, a body asks to be seen.','We leave a trace that an archive might hold gently.'],middles:['Being visible should not mean giving up the right to be safe.','The network remembers fragments; we remember a person.','I want a space where changing shape does not cost us tenderness.']},
+ {"title": "A Cyberfeminist Manifesto for the 21st Century", "author": "VNS Matrix", "kind": "MANIFESTO", "url": "https://vnsmatrix.net/projects/the-cyberfeminist-manifesto-for-the-21st-century", "starts": ["We slip a wild garden into the machine.", "My screen has learned to misbehave tenderly."], "middles": ["The circuit is warmer where our unruly bodies meet.", "We rewrite the invitation until everyone can enter."]},
+ {"title": "Feminist Principles of the Internet", "author": "Feminist Principles of the Internet community", "kind": "PRINCIPLES", "url": "https://feministinternet.org/en/principles", "starts": ["I want a network that asks before it touches.", "Our voices deserve a place without a price of admission."], "middles": ["We build consent into the spaces between messages.", "Privacy is a small room where I can become myself."]},
+ {"title": "Cruising Utopia", "author": "José Esteban Muñoz", "kind": "BOOK", "url": "https://nyupress.org/9781479874569/cruising-utopia-10th-anniversary-edition/", "starts": ["The future catches in the corner of your smile.", "We rehearse a world that has not learned our names yet."], "middles": ["A dance floor becomes a sketch of how we might live.", "I keep a little tomorrow folded inside this longing."]},
+ {"title": "Queer Phenomenology", "author": "Sara Ahmed", "kind": "BOOK", "url": "https://www.dukeupress.edu/queer-phenomenology", "starts": ["I turn toward you and the room changes direction.", "Our bodies find a path the map forgot to draw."], "middles": ["What is within reach changes when we move together.", "I follow the slant of a desire that will not straighten."]},
+ {"title": "Unruly Visions", "author": "Gayatri Gopinath", "kind": "BOOK", "url": "https://www.dukeupress.edu/unruly-visions", "starts": ["The image carries a home I have never visited.", "Across the distance, we recognize an unfinished belonging."], "middles": ["Our memories travel without agreeing on a border.", "I gather the fragments that an official map leaves out."]},
+ {"title": "Feminist Killjoys", "author": "Sara Ahmed", "kind": "ESSAYS", "url": "https://feministkilljoys.com/", "starts": ["We make room for the voice that interrupts the room.", "Your refusal leaves a doorway where the wall had been."], "middles": ["There is care in naming what has made us smaller.", "I stay beside you when speaking changes the weather."]}
 ];
+// The original six links were displayed together in earlier versions.
+let referenceStorage;try{referenceStorage=window.localStorage;}catch{}
+const nextReferences=createReferenceRotation(sources,referenceStorage,sources.slice(0,6).map(source=>source.url));
+let activeSources=null;
 const endings=['I want to be felt on the other side of the glass.','Can a cursor become a place to touch?','For a moment, the distance feels porous.','We are still becoming, even here.','Nothing about this longing is virtual.','I send a small ♡ and let it mean a body.'];
 const stage=document.querySelector('main'),cloudLayer=document.querySelector('#clouds');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -83,7 +93,7 @@ async function loadFonts(selected){
   try{const result=await Promise.race([document.fonts.load(descriptor),new Promise(resolve=>setTimeout(()=>resolve([]),5000))]);font.loaded=result.length>0;}catch{font.loaded=false;}
  }));
 }
-async function newPassage(){
+async function newPassage(rotateReferences=true){
  const version=++generation;
  cancelAnimationFrame(animationFrame);blocks=[];stage.replaceChildren();fontBag=[];refreshClouds();
  const grid=document.createElement('div');grid.className='poetry-grid';stage.append(grid);
@@ -92,8 +102,8 @@ async function newPassage(){
  lastLayout=signature;
  const selected=regions.map(()=>({...chooseFont()}));
  await loadFonts(selected);if(version!==generation)return;
- const sourceOrder=[...sources];
- for(let i=sourceOrder.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sourceOrder[i],sourceOrder[j]]=[sourceOrder[j],sourceOrder[i]];}
+ if(rotateReferences||!activeSources)activeSources=nextReferences(3);
+ const sourceOrder=activeSources;
  const linked=new Set();
  let fontIndex=0;
  for(const region of regions){
@@ -106,7 +116,7 @@ async function newPassage(){
   const poem=document.createElement('p'),reference=referenceOnce(source,linked);
   cell.append(poem);if(reference)cell.append(reference);grid.append(cell);
   const text=passageText(source),node=document.createElement('span');poem.append(node);
-  blocks.push({poem,node,text,source,speed:18+Math.random()*10,started:performance.now(),history:[]});
+  blocks.push({poem,node,text,source,speed:24+Math.random()*10,started:performance.now(),history:[]});
  }
  function tick(now){
   for(const block of blocks){
@@ -182,5 +192,5 @@ function refreshClouds(){
 }
 stage.addEventListener('click',e=>{if(!e.target.closest('a'))newPassage();});
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();newPassage();}});
-let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(newPassage,180);});
+let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>newPassage(false),180);});
 newPassage();

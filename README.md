@@ -12,4 +12,6 @@ Run the writing regression check with `node --test tests/*.test.cjs`.
 
 Reference links were checked on September 28, 2026. Cyberfeminism Index links to its publisher, Brandon to the Guggenheim collection, and Skincare for Unruly Bodies to Charlotte Rohde’s website because the original institutional PDF returns 404. Clouds use five larger forms with increased opacity and contrast.
 
-Each reference URL appears at most once per layout. Writing runs at 18–28 characters per second, with completed passages retained for at least 45 seconds while new words accumulate. Text can overlap neighboring cells; reference hearts stay above it. Expired passages are removed to keep long sessions bounded.
+Each reference URL appears at most once per layout. Writing runs at 24–34 characters per second, with completed passages retained for at least 45 seconds while new words accumulate. Text can overlap neighboring cells; reference hearts stay above it. Expired passages are removed to keep long sessions bounded.
+
+Refresh, background click, or Right Arrow selects up to three unseen references from a 12-source collection. Shown URLs persist in localStorage; resizing preserves the current selection. The first visit to this version starts with new additions, treating the original six references as already seen. After the pool is exhausted it reshuffles, avoiding the immediately previous set. If browser storage is blocked, history lasts for the current visit only.
