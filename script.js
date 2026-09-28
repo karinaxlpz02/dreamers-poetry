@@ -12,7 +12,8 @@ const desires=['your voice','our unfinished selves','the warmth of a reply','a n
 const gestures=['waits beside me','travels through the wires','opens another room','refuses to become a category','lingers after midnight','finds a softer rhythm','leaves room for us to change'];
 const places=['in the blue light','between one breath and the next','where the connection falters','on the other side of sleep','inside this small electric elsewhere','without asking for an explanation'];
 const fonts=[{name:'VT323',kind:'pixel'},{name:'DotGothic16',kind:'pixel'},{name:'Pixelify Sans',kind:'pixel'},{name:'Parisienne',kind:'cursive'},{name:'Sacramento',kind:'cursive'},{name:'Allura',kind:'cursive'},{name:'Great Vibes',kind:'cursive'}];
-let fontBag=[],lastFont='',lastSource=-1,timer,continuation,current;
+let fontBag=[],lastFont='',lastSource=-1,animationFrame;
+let blocks=[];
 function chooseFont(){
  if(!fontBag.length){fontBag=[...fonts];for(let i=fontBag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fontBag[i],fontBag[j]]=[fontBag[j],fontBag[i]];}if(fontBag.at(-1).name===lastFont)[fontBag[0],fontBag[fontBag.length-1]]=[fontBag.at(-1),fontBag[0]];}
  const font=fontBag.pop();lastFont=font.name;return font;
@@ -20,50 +21,62 @@ function chooseFont(){
 stage.replaceChildren();
 function sentence(source){return pick([()=>pick(source.starts),()=>pick(source.middles),()=>pick(endings),()=>{const subject=pick(desires);return subject[0].toUpperCase()+subject.slice(1)+' '+pick(gestures)+' '+pick(places)+'.';}])();}
 function heart(source){const a=document.createElement('a');a.textContent='♥︎';a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.title=`${source.title} — ${source.author}`;a.setAttribute('aria-label',`Reference: ${source.title} by ${source.author}`);return a;}
-function newPassage(manual=true){
- if(manual)refreshClouds();
- clearInterval(timer);clearTimeout(continuation);
- const oldLayers=[...stage.querySelectorAll('.text-layer')];
- oldLayers.forEach(old=>{old.setAttribute('aria-hidden','true');old.querySelectorAll('a').forEach(a=>a.tabIndex=-1);old.classList.add('archived');if(manual){old.classList.add('fading');setTimeout(()=>old.remove(),800);}});
- if(!manual){while(oldLayers.length>=8)oldLayers.shift().remove();oldLayers.forEach((old,i)=>old.style.opacity=String(.16+.45*(i+1)/oldLayers.length));}
-
- let index;do{index=Math.floor(Math.random()*sources.length)}while(index===lastSource);lastSource=index;const source=sources[index];
- const font=chooseFont();
- const layer=document.createElement('section');layer.className='text-layer '+font.kind;layer.style.fontFamily=`'${font.name}', ${font.kind==='pixel'?'monospace':'cursive'}`;
- layer.style.transform=`rotate(${(Math.random()*.9+.25)*(Math.random()<.5?-1:1)}deg)`;
- layer.setAttribute('aria-label','Original generative writing, inspired by '+source.title);stage.append(layer);current=layer;
- const style=getComputedStyle(layer),lineHeight=parseFloat(style.lineHeight);
- const shapeWidth=Math.min(layer.clientWidth*.96,layer.clientHeight*1.12),shapeHeight=shapeWidth*.9;
- const offsetX=(layer.clientWidth-shapeWidth)/2,offsetY=(layer.clientHeight-shapeHeight)/2;
- // Scan a heart outline into text spans; the top rows have two separate lobes.
- const outline=Array.from({length:720},(_,i)=>{const t=i/720*Math.PI*2;return{x:(16*Math.sin(t)**3+16)/32*shapeWidth,y:(12-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)))/29*shapeHeight};});
- function intervals(y){const cuts=[];for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];if((a.y<=y&&b.y>y)||(b.y<=y&&a.y>y))cuts.push(a.x+(y-a.y)/(b.y-a.y)*(b.x-a.x));}cuts.sort((a,b)=>a-b);const result=[];for(let i=0;i+1<cuts.length;i+=2)result.push([cuts[i],cuts[i+1]]);return result;}
- const slots=[];
- for(let y=0;y+lineHeight<shapeHeight;y+=lineHeight){
-  const middle=intervals(y+lineHeight*.5);
-  for(const [left,right] of middle){
-   // Insets at top and bottom keep the full letters inside the heart.
-   let lo=left,hi=right;
-   for(const sample of [y+lineHeight*.15,y+lineHeight*.9]){const match=intervals(sample).find(([a,b])=>a<right&&b>left);if(match){lo=Math.max(lo,match[0]);hi=Math.min(hi,match[1]);}else hi=lo;}
-   if(hi-lo>24)slots.push({left:offsetX+lo+3,top:offsetY+y,width:hi-lo-6});
-  }
+// Subdivide a ten-by-ten grid into differently sized, non-overlapping regions.
+function makeGrid(width,height){
+ const minW=Math.max(1,Math.ceil(115/(width/10))),minH=Math.max(1,Math.ceil(65/(height/10)));
+ const regions=[{x:0,y:0,w:10,h:10}],target=width<600?5:7;
+ while(regions.length<target){
+  const candidates=regions.filter(r=>r.w>=minW*2||r.h>=minH*2);
+  if(!candidates.length)break;
+  const region=candidates.sort((a,b)=>b.w*b.h-a.w*a.h)[Math.floor(Math.random()*Math.min(2,candidates.length))];
+  const vertical=region.w>=minW*2&&(region.h<minH*2||Math.random()<.55);
+  const size=vertical?region.w:region.h,min=vertical?minW:minH;
+  const cut=min+Math.floor(Math.random()*(size-min*2+1));
+  const first={...region},second={...region};
+  if(vertical){first.w=cut;second.x+=cut;second.w-=cut;}else{first.h=cut;second.y+=cut;second.h-=cut;}
+  regions.splice(regions.indexOf(region),1,first,second);
  }
- const probe=document.createElement('span');probe.className='probe';layer.append(probe);
- const link=heart(source);probe.append(link);const heartWidth=probe.getBoundingClientRect().width+10;probe.replaceChildren();
- let pending=[],previous='';const lines=[];
- for(let n=0;n<slots.length;n++){
-  const slot=slots[n];let text='',attempts=0;const limit=slot.width-(n===slots.length-1?heartWidth:0);
-  while(attempts++<300){if(!pending.length){let next=sentence(source);if(next===previous)next=sentence(source);previous=next;pending=next.split(' ');}
-   const candidate=text+(text?' ':'')+pending[0];probe.textContent=candidate;
-   if(probe.getBoundingClientRect().width>limit)break;
-   text=candidate;pending.shift();
-  }
-  if(!text&&n!==slots.length-1)continue;
-  const line=document.createElement('span');line.className='text-line';line.style.top=slot.top+'px';line.style.left=slot.left+'px';line.style.width=slot.width+'px';line.style.textAlign='center';layer.append(line);lines.push({node:line,text});
+ return regions.sort((a,b)=>a.y-b.y||a.x-b.x);
+}
+function fillBlock(poem,source,height){
+ let draft='',previous='';
+ for(let i=0;i<180;i++){
+  let text=sentence(source);if(text===previous)text=sentence(source);previous=text;
+  draft+=(draft?' ':'')+text;poem.textContent=draft+' ';poem.append(heart(source));
+  if(poem.getBoundingClientRect().height>height)break;
  }
- probe.remove();let row=0,char=0;
- function write(){if(current!==layer)return;const item=lines[row];char+=3;item.node.textContent=item.text.slice(0,char);if(char>=item.text.length){row++;char=0;if(row===lines.length){clearInterval(timer);item.node.append(' ',heart(source));continuation=setTimeout(()=>newPassage(false),1200);}}}
- if(reduced.matches){lines.forEach(item=>item.node.textContent=item.text);lines.at(-1).node.append(' ',heart(source));continuation=setTimeout(()=>newPassage(false),12000);}else timer=setInterval(write,24);
+ const words=draft.split(/\s+/);let low=0,high=words.length;
+ while(low<high){const mid=Math.ceil((low+high)/2);poem.textContent=words.slice(0,mid).join(' ')+' ';poem.append(heart(source));if(poem.getBoundingClientRect().height<=height)low=mid;else high=mid-1;}
+ const result=words.slice(0,low).join(' ');poem.replaceChildren();return result;
+}
+function newPassage(){
+ cancelAnimationFrame(animationFrame);blocks=[];stage.replaceChildren();fontBag=[];refreshClouds();
+ const grid=document.createElement('div');grid.className='poetry-grid';stage.append(grid);
+ const regions=makeGrid(grid.clientWidth,grid.clientHeight);
+ for(const region of regions){
+  let index;do{index=Math.floor(Math.random()*sources.length)}while(index===lastSource);lastSource=index;
+  const source=sources[index],font=chooseFont();
+  const cell=document.createElement('section');cell.className='poem-cell '+font.kind;
+  cell.style.gridColumn=`${region.x+1} / span ${region.w}`;cell.style.gridRow=`${region.y+1} / span ${region.h}`;
+  cell.style.fontFamily=`'${font.name}', ${font.kind==='pixel'?'monospace':'cursive'}`;
+  cell.setAttribute('aria-label','Original generative poetry inspired by '+source.title);
+  const poem=document.createElement('p');cell.append(poem);grid.append(cell);
+  const style=getComputedStyle(cell),available=cell.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-3;
+  const text=fillBlock(poem,source,available),node=document.createTextNode('');poem.append(node);
+  blocks.push({poem,node,text,source,speed:45+Math.random()*45,done:false});
+  cell.setAttribute('aria-busy','true');
+ }
+ const started=performance.now();
+ function tick(now){
+  let pending=false;
+  for(const block of blocks){if(block.done)continue;
+   const length=reduced.matches?block.text.length:Math.floor((now-started)*block.speed/1000);
+   block.node.data=block.text.slice(0,length);
+   if(length>=block.text.length){block.poem.append(' ',heart(block.source));block.poem.parentElement.removeAttribute('aria-busy');block.done=true;}else pending=true;
+  }
+  if(pending)animationFrame=requestAnimationFrame(tick);
+ }
+ animationFrame=requestAnimationFrame(tick);
 }
 function refreshClouds(){
  cloudLayer.getAnimations({subtree:true}).forEach(a=>a.cancel());cloudLayer.replaceChildren();
