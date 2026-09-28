@@ -125,11 +125,11 @@ async function newPassage(){
 }
 function refreshClouds(){
  cloudLayer.getAnimations({subtree:true}).forEach(a=>a.cancel());cloudLayer.replaceChildren();
- const cloudCount=5;
+ const cloudCount=8;
  const band=(innerHeight-30)/cloudCount;
  const occupied=[];
  for(let i=0;i<cloudCount;i++){
-  const art=document.createElement('div');art.className='heart-cloud';art.style.color='#fff';
+  const art=document.createElement('div');art.className='heart-cloud';art.style.color='#d9d9d9';
   const cols=66,rows=28,phase=Math.random()*6;
   const lobes=[{x:9,y:8,rx:6+Math.random(),ry:3.4+Math.random()*.8},{x:14+Math.random()*2,y:5.2+Math.random(),rx:5+Math.random(),ry:3.8+Math.random()*.7},{x:21+Math.random()*2,y:6.5+Math.random(),rx:5+Math.random(),ry:3.5+Math.random()*.8},{x:27,y:9,rx:4+Math.random()*.6,ry:2.7+Math.random()*.5},{x:17,y:10,rx:12+Math.random(),ry:2.5+Math.random()*.4}];
   for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
