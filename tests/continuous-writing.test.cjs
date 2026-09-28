@@ -3,25 +3,43 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync('script.js','utf8');
-for(const reducedMotion of [false,true])test(`passages renew indefinitely (reduced motion: ${reducedMotion})`,()=>{
+for(const reducedMotion of [false,true])test(`writing continues while completed passages linger (reduced motion: ${reducedMotion})`,()=>{
  const start=script.indexOf(' function tick(now){');
  const end=script.indexOf('\n animationFrame=requestAnimationFrame(tick);',start);
  const renewStart=script.indexOf('function continueBlock(');
  const renewEnd=script.indexOf('\nfunction refreshClouds()',renewStart);
- const node={data:''};
- const poem={append(n){assert.equal(n,node);}};
- const block={text:'A beginning.',node,poem,source:{},speed:60,started:0,available:100};
+ const createNode=()=>({textContent:'',remove(){this.removed=true;}});
+ const original=createNode();
+ const poem={append(){}};
+ const block={text:'A beginning.',node:original,poem,source:{},speed:20,started:0,history:[]};
  let scheduled=0,renewals=0;
- const context={blocks:[block],reduced:{matches:reducedMotion},animationFrame:null,requestAnimationFrame(){scheduled++;},fillBlock(){return `Fresh passage ${++renewals}.`;}};
+ const context={blocks:[block],reduced:{matches:reducedMotion},animationFrame:null,document:{createElement:createNode},requestAnimationFrame(){scheduled++;},passageText(){return `Fresh passage ${++renewals}.`;}};
  vm.createContext(context);
  vm.runInContext(script.slice(start,end)+'\n'+script.slice(renewStart,renewEnd),context);
- for(let cycle=1;cycle<=100;cycle++){
-  vm.runInContext(`tick(${cycle*10000});`,context);
-  assert.equal(block.started,cycle*10000);
-  assert.equal(block.text,`Fresh passage ${cycle}.`);
-  vm.runInContext(`tick(${cycle*10000+100});`,context);
-  assert.ok(node.data.startsWith('Fresh '),'new text must actually be displayed');
- }
- assert.equal(renewals,100);
- assert.equal(scheduled,200);
+ const tick=now=>vm.runInContext(`tick(${now});`,context);
+ tick(15000);
+ assert.equal(original.textContent,'A beginning. ');
+ assert.equal(block.text,'Fresh passage 1.');
+ tick(15300);
+ assert.ok(block.node.textContent.startsWith('Fresh '));
+ tick(59999);
+ assert.ok(!original.removed,'completed passage stays for at least 45 seconds');
+ tick(60000);
+ assert.ok(original.removed,'expired passages are removed');
+ for(let cycle=1;cycle<=100;cycle++)tick(60000+cycle*20000);
+ assert.ok(renewals>=100,'fresh passages keep being generated');
+ assert.ok(block.history.length<=4,'old passages cannot accumulate forever');
+ assert.equal(scheduled,104);
+});
+test('each reference URL appears only once per layout',()=>{
+ const start=script.indexOf('function referenceOnce(');
+ const end=script.indexOf('async function loadFonts(',start);
+ let links=0;
+ const context={heart(source){links++;return {href:source.url};}};
+ vm.createContext(context);vm.runInContext(script.slice(start,end),context);
+ const linked=new Set();
+ const sources=[{url:'https://example.org/a'},{url:'https://example.org/b'},{url:'https://example.org/a'}];
+ for(let round=0;round<10;round++)for(const source of sources)context.referenceOnce(source,linked);
+ assert.equal(links,2);
+ assert.equal(context.referenceOnce(sources[0],new Set()).href,sources[0].url,'new layout may reuse a reference');
 });

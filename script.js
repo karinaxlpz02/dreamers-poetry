@@ -14,7 +14,7 @@ const desires=['your voice','our unfinished selves','the warmth of a reply','a n
 const gestures=['waits beside me','travels through the wires','opens another room','refuses to become a category','lingers after midnight','finds a softer rhythm','leaves room for us to change'];
 const places=['in the blue light','between one breath and the next','where the connection falters','on the other side of sleep','inside this small electric elsewhere','without asking for an explanation'];
 const fonts=window.googleFontCatalog;
-let fontBag=[],lastFont='',lastSource=-1,animationFrame;
+let fontBag=[],lastFont='',animationFrame;
 let blocks=[],generation=0,lastLayout='';
 const loadedStyles=[];
 function chooseFont(){
@@ -67,17 +67,10 @@ function makeGrid(width,height){
  }
  return shaped.sort((a,b)=>a.y-b.y||a.x-b.x);
 }
-function fillBlock(poem,source,height){
- poem.style.flex='none';
- let draft='',previous='';
- for(let i=0;i<180;i++){
-  let text=sentence(source);if(text===previous)text=sentence(source);previous=text;
-  draft+=(draft?' ':'')+text;poem.textContent=draft;
-  if(poem.getBoundingClientRect().height>height)break;
- }
- const words=draft.split(/\s+/);let low=0,high=words.length;
- while(low<high){const mid=Math.ceil((low+high)/2);poem.textContent=words.slice(0,mid).join(' ');if(poem.getBoundingClientRect().height<=height)low=mid;else high=mid-1;}
- const result=words.slice(0,Math.max(1,low)).join(' ');poem.replaceChildren();poem.style.flex='';return result;
+function passageText(source){return sentence(source)+' '+sentence(source);}
+function referenceOnce(source,linked){
+ if(linked.has(source.url))return null;
+ linked.add(source.url);return heart(source);
 }
 async function loadFonts(selected){
  const link=document.createElement('link');link.rel='stylesheet';
@@ -99,27 +92,30 @@ async function newPassage(){
  lastLayout=signature;
  const selected=regions.map(()=>({...chooseFont()}));
  await loadFonts(selected);if(version!==generation)return;
+ const sourceOrder=[...sources];
+ for(let i=sourceOrder.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sourceOrder[i],sourceOrder[j]]=[sourceOrder[j],sourceOrder[i]];}
+ const linked=new Set();
  let fontIndex=0;
  for(const region of regions){
-  let index;do{index=Math.floor(Math.random()*sources.length)}while(index===lastSource);lastSource=index;
-  const source=sources[index],font=selected[fontIndex++];
+  const source=sourceOrder[fontIndex%sourceOrder.length],font=selected[fontIndex++];
   const cell=document.createElement('section');cell.className='poem-cell '+font.kind;
   cell.style.gridColumn=`${region.x+1} / span ${region.w}`;cell.style.gridRow=`${region.y+1} / span ${region.h}`;
   cell.style.fontFamily=font.loaded?`'${font.name}', ${font.fallback}`:font.fallback;
   cell.style.fontWeight=font.weight;cell.style.fontStyle=font.italic?'italic':'normal';
   cell.setAttribute('aria-label','Original generative poetry inspired by '+source.title);
-  const poem=document.createElement('p'),reference=heart(source);cell.append(poem,reference);grid.append(cell);
-  const style=getComputedStyle(cell),available=cell.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-reference.getBoundingClientRect().height-3;
-  const text=fillBlock(poem,source,available),node=document.createTextNode('');poem.append(node);
-  blocks.push({poem,node,text,source,available,speed:45+Math.random()*45,started:performance.now()});
+  const poem=document.createElement('p'),reference=referenceOnce(source,linked);
+  cell.append(poem);if(reference)cell.append(reference);grid.append(cell);
+  const text=passageText(source),node=document.createElement('span');poem.append(node);
+  blocks.push({poem,node,text,source,speed:18+Math.random()*10,started:performance.now(),history:[]});
  }
  function tick(now){
   for(const block of blocks){
    const elapsed=now-block.started;
    // Reduced motion refreshes whole passages at a reading pace.
    const length=reduced.matches?block.text.length:Math.floor(elapsed*block.speed/1000);
-   block.node.data=block.text.slice(0,length);
-   const duration=reduced.matches?Math.max(8000,block.text.length*70):block.text.length/block.speed*1000;
+   block.node.textContent=block.text.slice(0,length);
+   while(block.history.length&&block.history[0].expires<=now)block.history.shift().node.remove();
+   const duration=reduced.matches?Math.max(15000,block.text.length*100):block.text.length/block.speed*1000;
    if(elapsed>=duration)continueBlock(block,now);
   }
   animationFrame=requestAnimationFrame(tick);
@@ -127,12 +123,15 @@ async function newPassage(){
  animationFrame=requestAnimationFrame(tick);
 }
 function continueBlock(block,now){
+ // Keep completed words for at least 45 seconds while the next passage types.
+ block.node.textContent=block.text+' ';
+ block.history.push({node:block.node,expires:now+Math.max(45000,block.text.length*100)});
  const previous=block.text;
  for(let attempt=0;attempt<3;attempt++){
-  block.text=fillBlock(block.poem,block.source,block.available);
+  block.text=passageText(block.source);
   if(block.text!==previous)break;
  }
- block.poem.append(block.node);
+ block.node=document.createElement('span');block.poem.append(block.node);
  block.started=now;
 }
 

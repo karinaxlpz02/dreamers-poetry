@@ -11,3 +11,5 @@ With reduced motion enabled, whole passages refresh at a reading pace. Reference
 Run the writing regression check with `node --test tests/*.test.cjs`.
 
 Reference links were checked on September 28, 2026. Cyberfeminism Index links to its publisher, Brandon to the Guggenheim collection, and Skincare for Unruly Bodies to Charlotte Rohde’s website because the original institutional PDF returns 404. Clouds use five larger forms with increased opacity and contrast.
+
+Each reference URL appears at most once per layout. Writing runs at 18–28 characters per second, with completed passages retained for at least 45 seconds while new words accumulate. Text can overlap neighboring cells; reference hearts stay above it. Expired passages are removed to keep long sessions bounded.
