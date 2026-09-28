@@ -36,7 +36,13 @@ function makeGrid(width,height){
   if(vertical){first.w=cut;second.x+=cut;second.w-=cut;}else{first.h=cut;second.y+=cut;second.h-=cut;}
   regions.splice(regions.indexOf(region),1,first,second);
  }
- return regions.sort((a,b)=>a.y-b.y||a.x-b.x);
+ // Only columns at most one fifth of the screen may run the full height.
+ const balanced=regions.flatMap(region=>{
+  if(region.h!==10||region.w<=2)return [region];
+  const cut=3+Math.floor(Math.random()*5);
+  return [{...region,h:cut},{...region,y:region.y+cut,h:10-cut}];
+ });
+ return balanced.sort((a,b)=>a.y-b.y||a.x-b.x);
 }
 function fillBlock(poem,source,height){
  let draft='',previous='';
