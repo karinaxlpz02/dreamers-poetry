@@ -92,7 +92,7 @@ function refreshClouds(){
    [...cloudLayer.querySelectorAll('.heart-cloud')].slice(0,-1).forEach((previous,j)=>{
     previous.getAnimations().forEach(a=>a.cancel());
     previous.style.transform=`translate(12px,${15+j*band+(band-height)/2}px)`;
-    if(!reduced.matches)previous.animate([{transform:previous.style.transform},{transform:`translate(${maxX}px,${15+j*band+(band-height)/2}px)`}],{duration:22000+j*3000,iterations:Infinity,direction:'alternate',easing:'linear'});
+    if(!reduced.matches)previous.animate([{transform:previous.style.transform},{transform:`translate(${maxX}px,${15+j*band+(band-height)/2}px)`}],{duration:100000+j*12000,iterations:Infinity,direction:'alternate',easing:'linear'});
    });
    x=12+Math.random()*(maxX-12);y=15+i*band+(band-height)/2;
   }
@@ -100,9 +100,15 @@ function refreshClouds(){
   const endX=x<maxX/2?maxX:12;
   const endY=Math.max(12,Math.min(maxY,y+(Math.random()<.5?-1:1)*innerHeight*.25));
   art.style.transform=`translate(${x}px,${y}px)`;
-  if(!reduced.matches)art.animate([{transform:`translate(${x}px,${y}px)`},{transform:`translate(${endX}px,${endY}px)`}],{duration:18000+Math.random()*10000,iterations:Infinity,direction:'alternate',easing:'linear'});
+  if(!reduced.matches)art.animate([{transform:`translate(${x}px,${y}px)`},{transform:`translate(${endX}px,${endY}px)`}],{duration:95000+Math.random()*45000,iterations:Infinity,direction:'alternate',easing:'linear'});
  }
- for(let i=0;i<85;i++){const mote=document.createElement('span');mote.className='texture';mote.textContent=pick(['♥︎','✴','✴','♡','✧']);mote.style.left=(1+Math.random()*97)+'%';mote.style.top=(1+Math.random()*96)+'%';mote.style.fontSize=(7+Math.random()*7)+'px';mote.style.transform=`rotate(${Math.random()*50-25}deg)`;cloudLayer.append(mote);}
+ // Jittered cells spread the texture across the full sky without dense clumps.
+ const textureCols=Math.max(12,Math.ceil(innerWidth/55)),textureRows=Math.max(12,Math.ceil(innerHeight/45));
+ for(let y=0;y<textureRows;y++)for(let x=0;x<textureCols;x++){
+  const mote=document.createElement('span');mote.className='texture';mote.textContent=pick(['♥︎','♥︎','✴','✴','♡','✧']);
+  mote.style.left=((x+.15+Math.random()*.7)/textureCols*98)+'%';mote.style.top=((y+.15+Math.random()*.7)/textureRows*98)+'%';
+  mote.style.fontSize=(7+Math.random()*9)+'px';mote.style.opacity=String(.16+Math.random()*.16);mote.style.transform=`rotate(${Math.random()*50-25}deg)`;cloudLayer.append(mote);
+ }
 }
 stage.addEventListener('click',e=>{if(!e.target.closest('a'))newPassage();});
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();newPassage();}});
