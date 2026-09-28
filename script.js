@@ -1,8 +1,10 @@
 const sources = [
- {title:'Cyberfeminism Index',author:'Mindy Seu',kind:'LIVING ARCHIVE',url:'https://cyberfeminismindex.com',theme:'a network that holds us',starts:['I leave a little light on in the network.','Somewhere, a stranger is building a room for us.','Our tabs stay open like a circle of hands.'],middles:['Every link is a possible kinship, every alias a small beginning.','We make a home from the places that forgot to invite us.','I follow the traces of other queer bodies and find room for mine.']},
+ {title:'Cyberfeminism Index',author:'Mindy Seu',kind:'BOOK / INDEX',url:'https://www.inventorypress.com/product/cyberfeminism-index',theme:'a network that holds us',starts:['I leave a little light on in the network.','Somewhere, a stranger is building a room for us.','Our tabs stay open like a circle of hands.'],middles:['Every link is a possible kinship, every alias a small beginning.','We make a home from the places that forgot to invite us.','I follow the traces of other queer bodies and find room for mine.']},
  {title:'Glitch Feminism',author:'Legacy Russell',kind:'BOOK',url:'https://www.versobooks.com/products/460-glitch-feminism',theme:'a body beyond the dropdown',starts:['Tonight my avatar refuses to resolve.','I want you to meet the version of me that keeps changing.','The form asks what I am. I send you a shimmer.'],middles:['There is tenderness in being unreadable to a machine.','You let me arrive without choosing a final shape.','Our queer bodies spill beyond the boxes the interface offers.']},
  {title:'La seducción',author:'Sara Torres',kind:'BOOK · ESPAÑOL',url:'https://www.penguinlibros.com/es/novela-romantica/340377-libro-la-seduccion-9788419437808',theme:'the tenderness of waiting',starts:['Your typing dots make a tiny weather inside me.','I read your message slowly, as if slowness could bring you nearer.','Between your goodnight and my reply, a whole room opens.'],middles:['I want a closeness that leaves you room to move.','Desearte: to leave the door open without asking you to enter.','The distance is full of what we have not asked of each other.']},
- {title:'Skincare for Unruly Bodies',author:'Charlotte Rohde',kind:'ESSAY / PDF',url:'https://sandberg.nl/media/document/original/thesis_rohde.pdf',theme:'letters with a pulse',starts:['I give this sentence a softer body.','My letters lean toward you before I know what to say.','Imagine the curve of a letter as a place to rest.'],middles:['A word can blush without a face.','The screen holds a voice that will not stay inside its outline.','Even my punctuation wants to be held.']}
+ {title:'Skincare for Unruly Bodies',author:'Charlotte Rohde',kind:'ESSAY',url:'https://www.charlotterohde.de/',linkNote:'Author website; original essay PDF is unavailable',theme:'letters with a pulse',starts:['I give this sentence a softer body.','My letters lean toward you before I know what to say.','Imagine the curve of a letter as a place to rest.'],middles:['A word can blush without a face.','The screen holds a voice that will not stay inside its outline.','Even my punctuation wants to be held.']},
+ {title:'Xenofeminism: A Politics for Alienation',author:'Laboria Cuboniks',kind:'MANIFESTO',url:'https://laboriacuboniks.net/manifesto/',theme:'a future we can change',starts:['We build a future with room for every version of us.','Your name is not a limit on what you can become.','Tonight we teach the network another way to care.'],middles:['No default setting gets to decide the shape of our lives.','We share the tools and leave the possibilities open.','A different world begins in what we make available to each other.']},
+ {title:'Brandon',author:'Shu Lea Cheang',kind:'NET ART · ARCHIVE',url:'https://www.guggenheim.org/artwork/15337',theme:'a body across the network',starts:['I carry my chosen name from window to window.','Somewhere beyond the login, a body asks to be seen.','We leave a trace that an archive might hold gently.'],middles:['Being visible should not mean giving up the right to be safe.','The network remembers fragments; we remember a person.','I want a space where changing shape does not cost us tenderness.']}
 ];
 const endings=['I want to be felt on the other side of the glass.','Can a cursor become a place to touch?','For a moment, the distance feels porous.','We are still becoming, even here.','Nothing about this longing is virtual.','I send a small ♡ and let it mean a body.'];
 const stage=document.querySelector('main'),cloudLayer=document.querySelector('#clouds');
@@ -21,7 +23,7 @@ function chooseFont(){
 }
 stage.replaceChildren();
 function sentence(source){return pick([()=>pick(source.starts),()=>pick(source.middles),()=>pick(endings),()=>{const subject=pick(desires);return subject[0].toUpperCase()+subject.slice(1)+' '+pick(gestures)+' '+pick(places)+'.';}])();}
-function heart(source){const a=document.createElement('a');a.textContent='♥︎';a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.title=`${source.title} — ${source.author}`;a.setAttribute('aria-label',`Reference: ${source.title} by ${source.author}`);return a;}
+function heart(source){const a=document.createElement('a');a.textContent='♥︎';a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.title=`${source.title} — ${source.author}${source.linkNote?' · '+source.linkNote:''}`;a.setAttribute('aria-label',`Reference: ${source.title} by ${source.author}${source.linkNote?'. '+source.linkNote:''}`);return a;}
 // Subdivide a ten-by-ten grid into differently sized, non-overlapping regions.
 function makeGrid(width,height){
  const minW=Math.max(1,Math.ceil(115/(width/10))),minH=Math.max(1,Math.ceil(65/(height/10)));
@@ -66,15 +68,16 @@ function makeGrid(width,height){
  return shaped.sort((a,b)=>a.y-b.y||a.x-b.x);
 }
 function fillBlock(poem,source,height){
+ poem.style.flex='none';
  let draft='',previous='';
  for(let i=0;i<180;i++){
   let text=sentence(source);if(text===previous)text=sentence(source);previous=text;
-  draft+=(draft?' ':'')+text;poem.textContent=draft+' ';poem.append(heart(source));
+  draft+=(draft?' ':'')+text;poem.textContent=draft;
   if(poem.getBoundingClientRect().height>height)break;
  }
  const words=draft.split(/\s+/);let low=0,high=words.length;
- while(low<high){const mid=Math.ceil((low+high)/2);poem.textContent=words.slice(0,mid).join(' ')+' ';poem.append(heart(source));if(poem.getBoundingClientRect().height<=height)low=mid;else high=mid-1;}
- const result=words.slice(0,low).join(' ');poem.replaceChildren();return result;
+ while(low<high){const mid=Math.ceil((low+high)/2);poem.textContent=words.slice(0,mid).join(' ');if(poem.getBoundingClientRect().height<=height)low=mid;else high=mid-1;}
+ const result=words.slice(0,Math.max(1,low)).join(' ');poem.replaceChildren();poem.style.flex='';return result;
 }
 async function loadFonts(selected){
  const link=document.createElement('link');link.rel='stylesheet';
@@ -105,38 +108,48 @@ async function newPassage(){
   cell.style.fontFamily=font.loaded?`'${font.name}', ${font.fallback}`:font.fallback;
   cell.style.fontWeight=font.weight;cell.style.fontStyle=font.italic?'italic':'normal';
   cell.setAttribute('aria-label','Original generative poetry inspired by '+source.title);
-  const poem=document.createElement('p');cell.append(poem);grid.append(cell);
-  const style=getComputedStyle(cell),available=cell.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-3;
+  const poem=document.createElement('p'),reference=heart(source);cell.append(poem,reference);grid.append(cell);
+  const style=getComputedStyle(cell),available=cell.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-reference.getBoundingClientRect().height-3;
   const text=fillBlock(poem,source,available),node=document.createTextNode('');poem.append(node);
-  blocks.push({poem,node,text,source,speed:45+Math.random()*45,done:false});
-  cell.setAttribute('aria-busy','true');
+  blocks.push({poem,node,text,source,available,speed:45+Math.random()*45,started:performance.now()});
  }
- const started=performance.now();
  function tick(now){
-  let pending=false;
-  for(const block of blocks){if(block.done)continue;
-   const length=reduced.matches?block.text.length:Math.floor((now-started)*block.speed/1000);
+  for(const block of blocks){
+   const elapsed=now-block.started;
+   // Reduced motion refreshes whole passages at a reading pace.
+   const length=reduced.matches?block.text.length:Math.floor(elapsed*block.speed/1000);
    block.node.data=block.text.slice(0,length);
-   if(length>=block.text.length){block.poem.append(' ',heart(block.source));block.poem.parentElement.removeAttribute('aria-busy');block.done=true;}else pending=true;
+   const duration=reduced.matches?Math.max(8000,block.text.length*70):block.text.length/block.speed*1000;
+   if(elapsed>=duration)continueBlock(block,now);
   }
-  if(pending)animationFrame=requestAnimationFrame(tick);
+  animationFrame=requestAnimationFrame(tick);
  }
  animationFrame=requestAnimationFrame(tick);
 }
+function continueBlock(block,now){
+ const previous=block.text;
+ for(let attempt=0;attempt<3;attempt++){
+  block.text=fillBlock(block.poem,block.source,block.available);
+  if(block.text!==previous)break;
+ }
+ block.poem.append(block.node);
+ block.started=now;
+}
+
 function refreshClouds(){
  cloudLayer.getAnimations({subtree:true}).forEach(a=>a.cancel());cloudLayer.replaceChildren();
- const cloudCount=8;
+ const cloudCount=5;
  const band=(innerHeight-30)/cloudCount;
  const occupied=[];
  for(let i=0;i<cloudCount;i++){
-  const art=document.createElement('div');art.className='heart-cloud';art.style.color='#d9d9d9';
+  const art=document.createElement('div');art.className='heart-cloud';art.style.color='#ffffff';
   const cols=66,rows=28,phase=Math.random()*6;
   const lobes=[{x:9,y:8,rx:6+Math.random(),ry:3.4+Math.random()*.8},{x:14+Math.random()*2,y:5.2+Math.random(),rx:5+Math.random(),ry:3.8+Math.random()*.7},{x:21+Math.random()*2,y:6.5+Math.random(),rx:5+Math.random(),ry:3.5+Math.random()*.8},{x:27,y:9,rx:4+Math.random()*.6,ry:2.7+Math.random()*.5},{x:17,y:10,rx:12+Math.random(),ry:2.5+Math.random()*.4}];
   for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
    const cell=document.createElement('span'),wx=x/2+Math.sin(y*.25+phase)*.35,wy=y/2+Math.sin(x*.19+phase)*.3;
    if(lobes.some(l=>((wx-l.x)/l.rx)**2+((wy-l.y)/l.ry)**2<=1))cell.textContent=pick(['♥︎','♥︎','✴','✴','✧','·']);art.append(cell);
   }
-  const width=Math.min(innerWidth*.8,band*.85/.42,720),height=width*.42;
+  const width=Math.min(innerWidth*.8,band*.98/.42,900),height=width*.42;
   art.style.width=width+'px';art.style.height=height+'px';art.style.fontSize=Math.min(width/cols,height/rows)*.95+'px';cloudLayer.append(art);
   const maxX=Math.max(12,innerWidth-width-12),maxY=Math.max(12,innerHeight-height-12);
   let x,y,placed=false;
