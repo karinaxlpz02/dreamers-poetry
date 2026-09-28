@@ -24,23 +24,24 @@ function heart(source){const a=document.createElement('a');a.textContent='♥︎
 // Subdivide a ten-by-ten grid into differently sized, non-overlapping regions.
 function makeGrid(width,height){
  const minW=Math.max(1,Math.ceil(115/(width/10))),minH=Math.max(1,Math.ceil(65/(height/10)));
- const regions=[{x:0,y:0,w:10,h:10}],target=width<600?5:7;
+ const regions=[{x:0,y:0,w:10,h:10}],target=width<600?7:10;
  while(regions.length<target){
   const candidates=regions.filter(r=>r.w>=minW*2||r.h>=minH*2);
   if(!candidates.length)break;
   const region=candidates.sort((a,b)=>b.w*b.h-a.w*a.h)[Math.floor(Math.random()*Math.min(2,candidates.length))];
   const vertical=region.w>=minW*2&&(region.h<minH*2||Math.random()<.55);
   const size=vertical?region.w:region.h,min=vertical?minW:minH;
-  const cut=min+Math.floor(Math.random()*(size-min*2+1));
+  const cut=Math.random()<.7?(Math.random()<.5?min:size-min):min+Math.floor(Math.random()*(size-min*2+1));
   const first={...region},second={...region};
   if(vertical){first.w=cut;second.x+=cut;second.w-=cut;}else{first.h=cut;second.y+=cut;second.h-=cut;}
   regions.splice(regions.indexOf(region),1,first,second);
  }
- // Only columns at most one fifth of the screen may run the full height.
+ // Exaggerate the contrast: only one-tenth-width strips may stay tall.
  const balanced=regions.flatMap(region=>{
-  if(region.h!==10||region.w<=2)return [region];
-  const cut=3+Math.floor(Math.random()*5);
-  return [{...region,h:cut},{...region,y:region.y+cut,h:10-cut}];
+  if(region.w===1||region.h<=4)return [region];
+  const pieces=[];let remaining=region.h,y=region.y;
+  while(remaining>4){const cut=2+Math.floor(Math.random()*2);pieces.push({...region,y,h:cut});y+=cut;remaining-=cut;}
+  pieces.push({...region,y,h:remaining});return pieces;
  });
  return balanced.sort((a,b)=>a.y-b.y||a.x-b.x);
 }
