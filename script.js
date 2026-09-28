@@ -11,9 +11,10 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desires=['your voice','our unfinished selves','the warmth of a reply','a name we chose','the space between messages','this tender uncertainty','a queer future','our flickering outlines'];
 const gestures=['waits beside me','travels through the wires','opens another room','refuses to become a category','lingers after midnight','finds a softer rhythm','leaves room for us to change'];
 const places=['in the blue light','between one breath and the next','where the connection falters','on the other side of sleep','inside this small electric elsewhere','without asking for an explanation'];
-const fonts=[{name:'VT323',kind:'pixel'},{name:'DotGothic16',kind:'pixel'},{name:'Pixelify Sans',kind:'pixel'},{name:'Parisienne',kind:'cursive'},{name:'Sacramento',kind:'cursive'},{name:'Allura',kind:'cursive'},{name:'Great Vibes',kind:'cursive'}];
+const fonts=window.googleFontCatalog;
 let fontBag=[],lastFont='',lastSource=-1,animationFrame;
-let blocks=[];
+let blocks=[],generation=0,lastLayout='';
+const loadedStyles=[];
 function chooseFont(){
  if(!fontBag.length){fontBag=[...fonts];for(let i=fontBag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fontBag[i],fontBag[j]]=[fontBag[j],fontBag[i]];}if(fontBag.at(-1).name===lastFont)[fontBag[0],fontBag[fontBag.length-1]]=[fontBag.at(-1),fontBag[0]];}
  const font=fontBag.pop();lastFont=font.name;return font;
@@ -56,16 +57,34 @@ function fillBlock(poem,source,height){
  while(low<high){const mid=Math.ceil((low+high)/2);poem.textContent=words.slice(0,mid).join(' ')+' ';poem.append(heart(source));if(poem.getBoundingClientRect().height<=height)low=mid;else high=mid-1;}
  const result=words.slice(0,low).join(' ');poem.replaceChildren();return result;
 }
-function newPassage(){
+async function loadFonts(selected){
+ const link=document.createElement('link');link.rel='stylesheet';
+ link.href='https://fonts.googleapis.com/css2?'+selected.map(font=>'family='+encodeURIComponent(font.name)+':ital,wght@'+font.italic+','+font.weight).join('&')+'&display=swap';
+ const cssReady=new Promise(resolve=>{link.onload=()=>resolve();link.onerror=()=>resolve();});document.head.append(link);loadedStyles.push(link);
+ while(loadedStyles.length>4)loadedStyles.shift().remove();
+ await Promise.race([cssReady,new Promise(resolve=>setTimeout(resolve,5000))]);
+ await Promise.all(selected.map(async font=>{
+  const descriptor=`${font.italic?'italic':'normal'} ${font.weight} 20px "${font.name}"`;
+  try{const result=await Promise.race([document.fonts.load(descriptor),new Promise(resolve=>setTimeout(()=>resolve([]),5000))]);font.loaded=result.length>0;}catch{font.loaded=false;}
+ }));
+}
+async function newPassage(){
+ const version=++generation;
  cancelAnimationFrame(animationFrame);blocks=[];stage.replaceChildren();fontBag=[];refreshClouds();
  const grid=document.createElement('div');grid.className='poetry-grid';stage.append(grid);
- const regions=makeGrid(grid.clientWidth,grid.clientHeight);
+ let regions;let signature;let attempts=0;
+ do{regions=makeGrid(grid.clientWidth,grid.clientHeight);signature=JSON.stringify(regions);}while(signature===lastLayout&&++attempts<20);
+ lastLayout=signature;
+ const selected=regions.map(()=>({...chooseFont()}));
+ await loadFonts(selected);if(version!==generation)return;
+ let fontIndex=0;
  for(const region of regions){
   let index;do{index=Math.floor(Math.random()*sources.length)}while(index===lastSource);lastSource=index;
-  const source=sources[index],font=chooseFont();
+  const source=sources[index],font=selected[fontIndex++];
   const cell=document.createElement('section');cell.className='poem-cell '+font.kind;
   cell.style.gridColumn=`${region.x+1} / span ${region.w}`;cell.style.gridRow=`${region.y+1} / span ${region.h}`;
-  cell.style.fontFamily=`'${font.name}', ${font.kind==='pixel'?'monospace':'cursive'}`;
+  cell.style.fontFamily=font.loaded?`'${font.name}', ${font.fallback}`:font.fallback;
+  cell.style.fontWeight=font.weight;cell.style.fontStyle=font.italic?'italic':'normal';
   cell.setAttribute('aria-label','Original generative poetry inspired by '+source.title);
   const poem=document.createElement('p');cell.append(poem);grid.append(cell);
   const style=getComputedStyle(cell),available=cell.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-3;
@@ -133,4 +152,4 @@ function refreshClouds(){
 stage.addEventListener('click',e=>{if(!e.target.closest('a'))newPassage();});
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();newPassage();}});
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(newPassage,180);});
-refreshClouds();Promise.allSettled(fonts.map(font=>document.fonts.load(`24px "${font.name}"`))).then(()=>newPassage());
+newPassage();
