@@ -11,16 +11,25 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desires=['your voice','our unfinished selves','the warmth of a reply','a name we chose','the space between messages','this tender uncertainty','a queer future','our flickering outlines'];
 const gestures=['waits beside me','travels through the wires','opens another room','refuses to become a category','lingers after midnight','finds a softer rhythm','leaves room for us to change'];
 const places=['in the blue light','between one breath and the next','where the connection falters','on the other side of sleep','inside this small electric elsewhere','without asking for an explanation'];
-let iteration=0,lastSource=-1,timer,current;
+const fonts=[{name:'VT323',kind:'pixel'},{name:'DotGothic16',kind:'pixel'},{name:'Pixelify Sans',kind:'pixel'},{name:'Parisienne',kind:'cursive'},{name:'Sacramento',kind:'cursive'},{name:'Allura',kind:'cursive'},{name:'Great Vibes',kind:'cursive'}];
+let fontBag=[],lastFont='',lastSource=-1,timer,continuation,current;
+function chooseFont(){
+ if(!fontBag.length){fontBag=[...fonts];for(let i=fontBag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fontBag[i],fontBag[j]]=[fontBag[j],fontBag[i]];}if(fontBag.at(-1).name===lastFont)[fontBag[0],fontBag[fontBag.length-1]]=[fontBag.at(-1),fontBag[0]];}
+ const font=fontBag.pop();lastFont=font.name;return font;
+}
 stage.replaceChildren();
 function sentence(source){return pick([()=>pick(source.starts),()=>pick(source.middles),()=>pick(endings),()=>{const subject=pick(desires);return subject[0].toUpperCase()+subject.slice(1)+' '+pick(gestures)+' '+pick(places)+'.';}])();}
 function heart(source){const a=document.createElement('a');a.textContent='♥︎';a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.title=`${source.title} — ${source.author}`;a.setAttribute('aria-label',`Reference: ${source.title} by ${source.author}`);return a;}
-function newPassage(){
- refreshClouds();
- clearInterval(timer);
- if(current){const old=current;old.classList.add('fading');old.setAttribute('aria-hidden','true');old.querySelectorAll('a').forEach(a=>a.tabIndex=-1);setTimeout(()=>old.remove(),800);}
+function newPassage(manual=true){
+ if(manual)refreshClouds();
+ clearInterval(timer);clearTimeout(continuation);
+ const oldLayers=[...stage.querySelectorAll('.text-layer')];
+ oldLayers.forEach(old=>{old.setAttribute('aria-hidden','true');old.querySelectorAll('a').forEach(a=>a.tabIndex=-1);old.classList.add('archived');if(manual){old.classList.add('fading');setTimeout(()=>old.remove(),800);}});
+ if(!manual){while(oldLayers.length>=8)oldLayers.shift().remove();oldLayers.forEach((old,i)=>old.style.opacity=String(.16+.45*(i+1)/oldLayers.length));}
+
  let index;do{index=Math.floor(Math.random()*sources.length)}while(index===lastSource);lastSource=index;const source=sources[index];
- const layer=document.createElement('section');layer.className='text-layer '+(iteration++%2?'cursive':'pixel');
+ const font=chooseFont();
+ const layer=document.createElement('section');layer.className='text-layer '+font.kind;layer.style.fontFamily=`'${font.name}', ${font.kind==='pixel'?'monospace':'cursive'}`;
  layer.style.transform=`rotate(${(Math.random()*.9+.25)*(Math.random()<.5?-1:1)}deg)`;
  layer.setAttribute('aria-label','Original generative writing, inspired by '+source.title);stage.append(layer);current=layer;
  const style=getComputedStyle(layer),lineHeight=parseFloat(style.lineHeight),rows=Math.max(1,Math.floor(layer.clientHeight/lineHeight));
@@ -39,8 +48,8 @@ function newPassage(){
   const line=document.createElement('span');line.className='text-line';line.style.top=((start+n)%rows)*lineHeight+'px';layer.append(line);lines.push({node:line,text});
  }
  probe.remove();let row=0,char=0;
- function write(){if(current!==layer)return;const item=lines[row];char+=3;item.node.textContent=item.text.slice(0,char);if(char>=item.text.length){row++;char=0;if(row===lines.length){clearInterval(timer);item.node.append(' ',heart(source));}}}
- if(reduced.matches){lines.forEach(item=>item.node.textContent=item.text);lines.at(-1).node.append(' ',heart(source));}else timer=setInterval(write,24);
+ function write(){if(current!==layer)return;const item=lines[row];char+=3;item.node.textContent=item.text.slice(0,char);if(char>=item.text.length){row++;char=0;if(row===lines.length){clearInterval(timer);item.node.append(' ',heart(source));continuation=setTimeout(()=>newPassage(false),1200);}}}
+ if(reduced.matches){lines.forEach(item=>item.node.textContent=item.text);lines.at(-1).node.append(' ',heart(source));continuation=setTimeout(()=>newPassage(false),12000);}else timer=setInterval(write,24);
 }
 function refreshClouds(){
  cloudLayer.getAnimations({subtree:true}).forEach(a=>a.cancel());cloudLayer.replaceChildren();
@@ -83,4 +92,4 @@ function refreshClouds(){
 stage.addEventListener('click',e=>{if(!e.target.closest('a'))newPassage();});
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();newPassage();}});
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(newPassage,180);});
-refreshClouds();document.fonts.ready.then(newPassage);
+refreshClouds();Promise.allSettled(fonts.map(font=>document.fonts.load(`24px "${font.name}"`))).then(()=>newPassage());
