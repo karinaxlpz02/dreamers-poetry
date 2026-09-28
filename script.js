@@ -32,20 +32,34 @@ function newPassage(manual=true){
  const layer=document.createElement('section');layer.className='text-layer '+font.kind;layer.style.fontFamily=`'${font.name}', ${font.kind==='pixel'?'monospace':'cursive'}`;
  layer.style.transform=`rotate(${(Math.random()*.9+.25)*(Math.random()<.5?-1:1)}deg)`;
  layer.setAttribute('aria-label','Original generative writing, inspired by '+source.title);stage.append(layer);current=layer;
- const style=getComputedStyle(layer),lineHeight=parseFloat(style.lineHeight),rows=Math.max(1,Math.floor(layer.clientHeight/lineHeight));
- const start=Math.floor(Math.random()*rows);
+ const style=getComputedStyle(layer),lineHeight=parseFloat(style.lineHeight);
+ const shapeWidth=Math.min(layer.clientWidth*.96,layer.clientHeight*1.12),shapeHeight=shapeWidth*.9;
+ const offsetX=(layer.clientWidth-shapeWidth)/2,offsetY=(layer.clientHeight-shapeHeight)/2;
+ // Scan a heart outline into text spans; the top rows have two separate lobes.
+ const outline=Array.from({length:720},(_,i)=>{const t=i/720*Math.PI*2;return{x:(16*Math.sin(t)**3+16)/32*shapeWidth,y:(12-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)))/29*shapeHeight};});
+ function intervals(y){const cuts=[];for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];if((a.y<=y&&b.y>y)||(b.y<=y&&a.y>y))cuts.push(a.x+(y-a.y)/(b.y-a.y)*(b.x-a.x));}cuts.sort((a,b)=>a-b);const result=[];for(let i=0;i+1<cuts.length;i+=2)result.push([cuts[i],cuts[i+1]]);return result;}
+ const slots=[];
+ for(let y=0;y+lineHeight<shapeHeight;y+=lineHeight){
+  const middle=intervals(y+lineHeight*.5);
+  for(const [left,right] of middle){
+   // Insets at top and bottom keep the full letters inside the heart.
+   let lo=left,hi=right;
+   for(const sample of [y+lineHeight*.15,y+lineHeight*.9]){const match=intervals(sample).find(([a,b])=>a<right&&b>left);if(match){lo=Math.max(lo,match[0]);hi=Math.min(hi,match[1]);}else hi=lo;}
+   if(hi-lo>24)slots.push({left:offsetX+lo+3,top:offsetY+y,width:hi-lo-6});
+  }
+ }
  const probe=document.createElement('span');probe.className='probe';layer.append(probe);
- // Measure complete words in the loaded font and reserve the final heart's width.
- const link=heart(source);probe.append(link);const heartWidth=probe.getBoundingClientRect().width+14;probe.replaceChildren();
+ const link=heart(source);probe.append(link);const heartWidth=probe.getBoundingClientRect().width+10;probe.replaceChildren();
  let pending=[],previous='';const lines=[];
- for(let n=0;n<rows;n++){
-  let text='',attempts=0;const limit=layer.clientWidth-(n===rows-1?heartWidth:0);
+ for(let n=0;n<slots.length;n++){
+  const slot=slots[n];let text='',attempts=0;const limit=slot.width-(n===slots.length-1?heartWidth:0);
   while(attempts++<300){if(!pending.length){let next=sentence(source);if(next===previous)next=sentence(source);previous=next;pending=next.split(' ');}
    const candidate=text+(text?' ':'')+pending[0];probe.textContent=candidate;
-   if(probe.getBoundingClientRect().width>limit&&text)break;
+   if(probe.getBoundingClientRect().width>limit)break;
    text=candidate;pending.shift();
   }
-  const line=document.createElement('span');line.className='text-line';line.style.top=((start+n)%rows)*lineHeight+'px';layer.append(line);lines.push({node:line,text});
+  if(!text&&n!==slots.length-1)continue;
+  const line=document.createElement('span');line.className='text-line';line.style.top=slot.top+'px';line.style.left=slot.left+'px';line.style.width=slot.width+'px';line.style.textAlign='center';layer.append(line);lines.push({node:line,text});
  }
  probe.remove();let row=0,char=0;
  function write(){if(current!==layer)return;const item=lines[row];char+=3;item.node.textContent=item.text.slice(0,char);if(char>=item.text.length){row++;char=0;if(row===lines.length){clearInterval(timer);item.node.append(' ',heart(source));continuation=setTimeout(()=>newPassage(false),1200);}}}
@@ -53,9 +67,10 @@ function newPassage(manual=true){
 }
 function refreshClouds(){
  cloudLayer.getAnimations({subtree:true}).forEach(a=>a.cancel());cloudLayer.replaceChildren();
- const band=(innerHeight-30)/3;
+ const cloudCount=5;
+ const band=(innerHeight-30)/cloudCount;
  const occupied=[];
- for(let i=0;i<3;i++){
+ for(let i=0;i<cloudCount;i++){
   const art=document.createElement('div');art.className='heart-cloud';
   const cols=66,rows=28,phase=Math.random()*6;
   const lobes=[{x:9,y:8,rx:6+Math.random(),ry:3.4+Math.random()*.8},{x:14+Math.random()*2,y:5.2+Math.random(),rx:5+Math.random(),ry:3.8+Math.random()*.7},{x:21+Math.random()*2,y:6.5+Math.random(),rx:5+Math.random(),ry:3.5+Math.random()*.8},{x:27,y:9,rx:4+Math.random()*.6,ry:2.7+Math.random()*.5},{x:17,y:10,rx:12+Math.random(),ry:2.5+Math.random()*.4}];
