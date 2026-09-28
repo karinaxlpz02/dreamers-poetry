@@ -107,7 +107,7 @@ function refreshClouds(){
  for(let y=0;y<textureRows;y++)for(let x=0;x<textureCols;x++){
   const mote=document.createElement('span');mote.className='texture';mote.textContent=pick(['♥︎','♥︎','✴','✴','♡','✧']);
   mote.style.left=((x+.15+Math.random()*.7)/textureCols*98)+'%';mote.style.top=((y+.15+Math.random()*.7)/textureRows*98)+'%';
-  mote.style.fontSize=(7+Math.random()*9)+'px';mote.style.opacity=String(.16+Math.random()*.16);mote.style.transform=`rotate(${Math.random()*50-25}deg)`;cloudLayer.append(mote);
+  mote.style.fontSize=(4+Math.random()*4)+'px';mote.style.opacity=String(.16+Math.random()*.16);mote.style.transform=`rotate(${Math.random()*50-25}deg)`;cloudLayer.append(mote);
  }
 }
 stage.addEventListener('click',e=>{if(!e.target.closest('a'))newPassage();});
